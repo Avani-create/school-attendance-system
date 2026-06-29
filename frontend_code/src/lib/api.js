@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// ✅ REMOVED /api/v1 – now points directly to backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// ✅ HARCODED: Directly points to your Render backend
+const API_BASE_URL = 'https://school-attendance-system-jgx2.onrender.com';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -30,7 +30,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/login') {
       originalRequest._retry = true;
       try {
-        // Attempt token refresh
         const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
           headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
         });
@@ -39,7 +38,6 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Clear auth and redirect
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -76,11 +74,9 @@ const api = {
       const { access_token, user } = response.data;
       localStorage.setItem('access_token', access_token);
       
-      // ✅ FIX: If user is missing, create a default user object
       if (user) {
         localStorage.setItem('user', JSON.stringify(user));
       } else {
-        // Fallback: create user from email
         localStorage.setItem('user', JSON.stringify({
           name: email.split('@')[0],
           email: email,
@@ -95,7 +91,6 @@ const api = {
       localStorage.removeItem('user');
     },
     getUser: () => {
-      // ✅ FIXED: Try-catch to handle JSON parsing errors
       try {
         const userStr = localStorage.getItem('user');
         if (!userStr) return null;
