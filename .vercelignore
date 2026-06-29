@@ -1,4 +1,9 @@
-
-frontend_code/src/
-frontend_code/node_modules/
+**/__pycache__/
+**/*.pyc
+**/node_modules/
+**/.env
+**/attendance.db
+**/screenshots/
+**/README.md
+**/.gitignore
 backend_code/
