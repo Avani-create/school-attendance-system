@@ -138,6 +138,11 @@ Frontend (Vercel)
 4.Mobile app for teachers
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
+## 🌐 Live Demo
+
+- **Frontend:** https://school-attendance-system-ashy.vercel.app
+- **Backend:** https://school-attendance-system-jgx2.onrender.com/health
+
 ### 👤 Author
 
 Avani A – 3rd Year CSE, SRM University
