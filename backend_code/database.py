@@ -7,10 +7,16 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # This completely ignores any SQLite fallback
 DATABASE_URL = "postgresql+asyncpg://neondb_owner:npg_y6IL4kQlOsXw@ep-misty-leaf-aobpkuzu.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
+# 🔥 FORCE PRINT – This will appear in Render logs if this file is used
+print("=" * 60)
+print("🚀 USING NEON POSTGRESQL DATABASE!")
+print(f"📦 DATABASE_URL: {DATABASE_URL}")
+print("=" * 60)
+
 # Create async engine for PostgreSQL
 engine = create_async_engine(
     DATABASE_URL, 
-    echo=False,  # Set to True for debugging SQL queries
+    echo=False,
     future=True
 )
 
