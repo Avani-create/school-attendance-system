@@ -1,18 +1,16 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import NullPool
 
-# Use SQLite (built into Python!)
-# The database file will be created as "attendance.db" in your backend_code folder
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./attendance.db")
+# ✅ FORCE PostgreSQL – Hardcoded for Neon
+# This completely ignores any SQLite fallback
+DATABASE_URL = "postgresql+asyncpg://neondb_owner:npg_y6IL4kQlOsXw@ep-misty-leaf-aobpkuzu.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
-# Create async engine for SQLite
+# Create async engine for PostgreSQL
 engine = create_async_engine(
     DATABASE_URL, 
-    echo=True,  # Set to False in production (True helps debugging)
-    future=True,
-    poolclass=NullPool  # SQLite doesn't need connection pooling
+    echo=False,  # Set to True for debugging SQL queries
+    future=True
 )
 
 # Async session factory
