@@ -92,4 +92,4 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "database": "SQLite"}
+    return {"status": "healthy", "database": "PostgreSQL"}  # ✅ UPDATED
