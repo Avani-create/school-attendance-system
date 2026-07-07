@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete, distinct, func
 from sqlalchemy.orm import selectinload
+from datetime import datetime
 from database import get_db
-from models import Student, Teacher, TeacherClass, AuditLog
+from models import Student, Teacher, TeacherClass, AuditLog, Class
 from auth import get_current_admin, get_current_user
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 router = APIRouter(prefix="/classes", tags=["Classes"])
 
@@ -15,6 +16,24 @@ async def get_classes(
     db: AsyncSession = Depends(get_db),
     current_user: Teacher = Depends(get_current_user)
 ):
+    """Get all classes with student counts and teacher assignments"""
+    
+    # ✅ Get all classes from the Class table (only active ones)
+    class_stmt = select(Class).where(Class.is_active == True).order_by(Class.name)
+    class_result = await db.execute(class_stmt)
+    classes = class_result.scalars().all()
+    
+    # If no classes exist yet, provide default list for school LKG-5th standard
+    if not classes:
+        defaults = ["LKG", "UKG", "1A", "2A", "3A", "4A", "5A"]
+        return {"classes": [
+            {
+                "class_name": cls,
+                "students_count": 0,
+                "teachers": []
+            } for cls in defaults
+        ]}
+    
     # Fetch all active student class counts
     student_stmt = select(Student.class_name, func.count(Student.id)).where(Student.is_active == True).group_by(Student.class_name)
     student_result = await db.execute(student_stmt)
@@ -33,26 +52,21 @@ async def get_classes(
         if tc.teacher.is_active:
             class_teachers[tc.class_name].append(tc.teacher.name)
 
-    # Collect all unique class names from both students and teacher assignments
-    all_classes = set(list(class_student_counts.keys()) + list(class_teachers.keys()))
-    
-    # If no classes exist yet, provide default list for school LKG-5th standard
-    if not all_classes:
-        defaults = ["LKG", "UKG", "1A", "2A", "3A", "4A", "5A"]
-        all_classes.update(defaults)
-
+    # Build response with all classes from Class table
     result_classes = []
-    for cls in all_classes:
+    for class_obj in classes:
+        cls_name = class_obj.name
+        
         # Check teacher authorization: teachers can only view their own class(es)
         if not current_user.is_admin:
             assigned_classes = [c.class_name for c in current_user.classes]
-            if cls not in assigned_classes:
+            if cls_name not in assigned_classes:
                 continue
 
         result_classes.append({
-            "class_name": cls,
-            "students_count": class_student_counts.get(cls, 0),
-            "teachers": class_teachers.get(cls, [])
+            "class_name": cls_name,
+            "students_count": class_student_counts.get(cls_name, 0),
+            "teachers": class_teachers.get(cls_name, [])
         })
 
     result_classes.sort(key=lambda x: x["class_name"])
@@ -65,23 +79,69 @@ async def create_class(
     db: AsyncSession = Depends(get_db),
     current_admin: Teacher = Depends(get_current_admin)
 ):
+    """Create a new class"""
     class_name = payload.get("class_name")
     if not class_name or len(class_name) > 10:
         raise HTTPException(status_code=400, detail="Invalid class name")
+    
+    # ✅ Check if class already exists (including soft-deleted)
+    stmt = select(Class).where(Class.name == class_name)
+    result = await db.execute(stmt)
+    existing_class = result.scalar_one_or_none()
+    
+    if existing_class:
+        if existing_class.is_active:
+            raise HTTPException(status_code=400, detail="Class already exists")
+        else:
+            # ✅ Reactivate soft-deleted class
+            existing_class.is_active = True
+            existing_class.updated_at = datetime.now()
+            await db.commit()
+            
+            # Log the reactivation
+            audit_entry = AuditLog(
+                user_id=current_admin.id,
+                action="REACTIVATE_CLASS",
+                table_name="classes",
+                record_id=existing_class.id,
+                new_data={"class_name": class_name, "status": "reactivated"}
+            )
+            db.add(audit_entry)
+            await db.commit()
+            
+            return {
+                "class_name": class_name, 
+                "students_count": 0, 
+                "teachers": [],
+                "message": "Class reactivated successfully"
+            }
+    
+    # ✅ Create new class in Class table
+    new_class = Class(
+        name=class_name,
+        is_active=True
+    )
+    db.add(new_class)
+    await db.commit()
+    await db.refresh(new_class)
 
-    # To create a class without students, we can write an audit log or create a dummy class assignment.
-    # We will log the creation. The client can now see it.
+    # Log the creation
     audit_entry = AuditLog(
         user_id=current_admin.id,
         action="CREATE_CLASS",
         table_name="classes",
-        record_id=0,
+        record_id=new_class.id,
         new_data={"class_name": class_name}
     )
     db.add(audit_entry)
     await db.commit()
 
-    return {"class_name": class_name, "students_count": 0, "teachers": []}
+    return {
+        "class_name": class_name, 
+        "students_count": 0, 
+        "teachers": [],
+        "message": "Class created successfully"
+    }
 
 
 @router.delete("/{class_name}")
@@ -90,28 +150,100 @@ async def delete_class(
     db: AsyncSession = Depends(get_db),
     current_admin: Teacher = Depends(get_current_admin)
 ):
-    # Check if there are active students assigned to this class
-    stmt = select(Student).where(Student.class_name == class_name, Student.is_active == True)
+    """Soft delete a class"""
+    
+    # ✅ Check if class exists in Class table
+    stmt = select(Class).where(Class.name == class_name)
     result = await db.execute(stmt)
-    student = result.scalar_one_or_none()
+    class_obj = result.scalar_one_or_none()
+    
+    if not class_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Class not found"
+        )
+    
+    # Check if there are active students assigned to this class
+    student_stmt = select(Student).where(Student.class_name == class_name, Student.is_active == True)
+    student_result = await db.execute(student_stmt)
+    student = student_result.scalar_one_or_none()
+    
     if student:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete class because active students are assigned to it"
         )
+    
+    # ✅ Soft delete the class (mark as inactive)
+    class_obj.is_active = False
+    class_obj.updated_at = datetime.now()
+    await db.commit()
 
-    # Delete teacher class assignments for this class
+    # ✅ Delete teacher class assignments for this class (optional - or keep for history)
     delete_stmt = delete(TeacherClass).where(TeacherClass.class_name == class_name)
     await db.execute(delete_stmt)
 
+    # Log the deletion
     audit_entry = AuditLog(
         user_id=current_admin.id,
         action="DELETE_CLASS",
         table_name="classes",
-        record_id=0,
-        old_data={"class_name": class_name}
+        record_id=class_obj.id,
+        old_data={"class_name": class_name, "is_active": True}
     )
     db.add(audit_entry)
     await db.commit()
 
-    return {"success": True}
+    return {
+        "success": True,
+        "message": f"Class {class_name} soft deleted successfully"
+    }
+
+
+@router.get("/available")
+async def get_available_classes(
+    db: AsyncSession = Depends(get_db),
+    current_user: Teacher = Depends(get_current_user)
+):
+    """Get all classes that can be assigned to teachers (active classes)"""
+    
+    stmt = select(Class).where(Class.is_active == True).order_by(Class.name)
+    result = await db.execute(stmt)
+    classes = result.scalars().all()
+    
+    return {"classes": [{"id": c.id, "name": c.name} for c in classes]}
+
+
+@router.get("/{class_name}/students")
+async def get_class_students(
+    class_name: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Teacher = Depends(get_current_user)
+):
+    """Get all active students in a class"""
+    
+    # Check teacher authorization
+    if not current_user.is_admin:
+        assigned_classes = [c.class_name for c in current_user.classes]
+        if class_name not in assigned_classes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to view this class"
+            )
+    
+    stmt = select(Student).where(
+        Student.class_name == class_name,
+        Student.is_active == True
+    ).order_by(Student.name)
+    
+    result = await db.execute(stmt)
+    students = result.scalars().all()
+    
+    return {"students": [
+        {
+            "id": s.id,
+            "name": s.name,
+            "parent_phone": s.parent_phone,
+            "admission_date": s.admission_date
+        } for s in students
+    ]}
