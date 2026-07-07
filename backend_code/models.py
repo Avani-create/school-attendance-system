@@ -11,9 +11,10 @@ class Class(Base):
     created_at = Column(DateTime, server_default=func.current_timestamp())
     updated_at = Column(DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp())
     
-    # Relationship to students
-    students = relationship("Student", back_populates="class_info")
-    # Relationship to teacher classes
+    # ❌ REMOVE THIS - causing the error!
+    # students = relationship("Student", back_populates="class_info")
+    
+    # ✅ Keep this - TeacherClass relationship is fine
     teacher_classes = relationship("TeacherClass", back_populates="class_ref")
 
 class Student(Base):
@@ -36,7 +37,8 @@ class Student(Base):
     # Relationships
     attendance_records = relationship("Attendance", back_populates="student", cascade="all, delete-orphan")
     academic_history = relationship("StudentAcademicYear", back_populates="student", cascade="all, delete-orphan")
-    class_info = relationship("Class", back_populates="students", foreign_keys=[class_name], primaryjoin="Student.class_name == Class.name")
+    # ❌ REMOVE THIS - causing the error!
+    # class_info = relationship("Class", back_populates="students", foreign_keys=[class_name], primaryjoin="Student.class_name == Class.name")
 
 
 class Teacher(Base):

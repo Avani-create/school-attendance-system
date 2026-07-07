@@ -166,12 +166,12 @@ async def delete_class(
     # Check if there are active students assigned to this class
     student_stmt = select(Student).where(Student.class_name == class_name, Student.is_active == True)
     student_result = await db.execute(student_stmt)
-    student = student_result.scalar_one_or_none()
+    students = student_result.scalars().all()
     
-    if student:
+    if students:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete class because active students are assigned to it"
+            detail=f"Cannot delete class because {len(students)} active students are assigned to it"
         )
     
     # ✅ Soft delete the class (mark as inactive)
@@ -179,9 +179,10 @@ async def delete_class(
     class_obj.updated_at = datetime.now()
     await db.commit()
 
-    # ✅ Delete teacher class assignments for this class (optional - or keep for history)
+    # ✅ Delete teacher class assignments for this class
     delete_stmt = delete(TeacherClass).where(TeacherClass.class_name == class_name)
     await db.execute(delete_stmt)
+    await db.commit()
 
     # Log the deletion
     audit_entry = AuditLog(
