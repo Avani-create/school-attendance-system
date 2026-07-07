@@ -7,8 +7,12 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/frontend_code/dist/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot))",
       "dest": "/frontend_code/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend_code/dist/index.html"
     }
   ]
 }
