@@ -7,15 +7,13 @@ class Class(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(10), unique=True, nullable=False, index=True)
-    is_active = Column(Boolean, default=True)  # ✅ Soft delete flag
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.current_timestamp())
     updated_at = Column(DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp())
     
-    # ❌ REMOVE THIS - causing the error!
+    # ❌ REMOVED ALL RELATIONSHIPS - they were causing errors!
     # students = relationship("Student", back_populates="class_info")
-    
-    # ✅ Keep this - TeacherClass relationship is fine
-    teacher_classes = relationship("TeacherClass", back_populates="class_ref")
+    # teacher_classes = relationship("TeacherClass", back_populates="class_ref")
 
 class Student(Base):
     __tablename__ = "students"
@@ -37,9 +35,7 @@ class Student(Base):
     # Relationships
     attendance_records = relationship("Attendance", back_populates="student", cascade="all, delete-orphan")
     academic_history = relationship("StudentAcademicYear", back_populates="student", cascade="all, delete-orphan")
-    # ❌ REMOVE THIS - causing the error!
-    # class_info = relationship("Class", back_populates="students", foreign_keys=[class_name], primaryjoin="Student.class_name == Class.name")
-
+    # ❌ REMOVED class_info relationship
 
 class Teacher(Base):
     __tablename__ = "teachers"
@@ -70,7 +66,7 @@ class TeacherClass(Base):
 
     # Relationships
     teacher = relationship("Teacher", back_populates="classes")
-    class_ref = relationship("Class", back_populates="teacher_classes", foreign_keys=[class_name], primaryjoin="TeacherClass.class_name == Class.name")
+    # ❌ REMOVED class_ref relationship - was causing error!
 
 
 class AcademicYear(Base):
@@ -108,7 +104,7 @@ class Attendance(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     date = Column(Date, nullable=False)
-    status = Column(String(10), nullable=False) # 'present', 'absent', 'late'
+    status = Column(String(10), nullable=False)
     reason = Column(Text, nullable=True)
     teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.current_timestamp())
