@@ -89,7 +89,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except JWTError:
         raise credentials_exception
 
-    stmt = select(Teacher).options(selectinload(Teacher.classes)).where(Teacher.email == email)
+    # ✅ FIXED: Removed selectinload(Teacher.classes) - just query the teacher directly
+    stmt = select(Teacher).where(Teacher.email == email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 

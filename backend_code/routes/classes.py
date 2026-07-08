@@ -52,15 +52,22 @@ async def get_classes(
         if tc.teacher.is_active:
             class_teachers[tc.class_name].append(tc.teacher.name)
 
+    # ✅ FIXED: Get teacher's assigned classes by querying TeacherClass table
+    # instead of using current_user.classes (which might not exist)
+    teacher_assigned_classes = []
+    if not current_user.is_admin:
+        teacher_class_query = select(TeacherClass.class_name).where(TeacherClass.teacher_id == current_user.id)
+        teacher_class_result = await db.execute(teacher_class_query)
+        teacher_assigned_classes = [row[0] for row in teacher_class_result.all()]
+
     # Build response with all classes from Class table
     result_classes = []
     for class_obj in classes:
         cls_name = class_obj.name
         
-        # Check teacher authorization: teachers can only view their own class(es)
+        # ✅ FIXED: Check teacher authorization using the queried list
         if not current_user.is_admin:
-            assigned_classes = [c.class_name for c in current_user.classes]
-            if cls_name not in assigned_classes:
+            if cls_name not in teacher_assigned_classes:
                 continue
 
         result_classes.append({
@@ -223,10 +230,16 @@ async def get_class_students(
 ):
     """Get all active students in a class"""
     
-    # Check teacher authorization
+    # ✅ FIXED: Check teacher authorization using TeacherClass table
     if not current_user.is_admin:
-        assigned_classes = [c.class_name for c in current_user.classes]
-        if class_name not in assigned_classes:
+        teacher_class_query = select(TeacherClass).where(
+            TeacherClass.teacher_id == current_user.id,
+            TeacherClass.class_name == class_name
+        )
+        teacher_class_result = await db.execute(teacher_class_query)
+        assigned = teacher_class_result.scalar_one_or_none()
+        
+        if not assigned:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to view this class"
