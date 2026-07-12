@@ -3,22 +3,26 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# ✅ FORCE PostgreSQL – Hardcoded for Neon
-# REMOVED ?sslmode=require – asyncpg doesn't support it
-DATABASE_URL = "postgresql+asyncpg://neondb_owner:npg_y6IL4kQlOsXw@ep-misty-leaf-aobpkuzu.c-2.ap-southeast-1.aws.neon.tech/neondb"
+# ✅ READ FROM ENVIRONMENT VARIABLE (NOT HARDCODED!)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+# ✅ Remove any ?sslmode=require if present (asyncpg doesn't support it)
+if "?sslmode=require" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("?sslmode=require", "")
 
 # Create async engine for PostgreSQL with SSL support
 engine = create_async_engine(
     DATABASE_URL, 
     echo=False,
     future=True,
-    # ✅ THIS IS CRITICAL FOR NEON POSTGRESQL
     connect_args={
         "ssl": True,  # asyncpg uses 'ssl' not 'sslmode'
-        # You can also use: "ssl": "require" for some versions
     },
-    pool_pre_ping=True,  # Check connection before using
-    pool_recycle=300,    # Recycle connections every 5 minutes
+    pool_pre_ping=True,
+    pool_recycle=300,
 )
 
 # Async session factory
