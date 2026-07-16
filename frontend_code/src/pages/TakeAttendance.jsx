@@ -96,6 +96,7 @@ export default function TakeAttendance() {
     }));
   };
 
+  // ✅ FIXED: handleSave now passes all students to the API
   const handleSave = async () => {
     if (students.length === 0) {
       setError('Cannot submit empty attendance');
@@ -105,10 +106,18 @@ export default function TakeAttendance() {
     setError('');
     setMessage('');
     try {
-      await api.attendance.submitBulk(selectedClass, date, absentStudentIds, reasons);
+      // ✅ Pass all students to submitBulk for present/absent tracking
+      await api.attendance.submitBulk(
+        selectedClass, 
+        date, 
+        absentStudentIds, 
+        reasons, 
+        students  // ← This is the fix - passing all students
+      );
       setMessage(`Attendance saved for ${students.length} students. (${students.length - absentStudentIds.length} Present, ${absentStudentIds.length} Absent)`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
+      console.error('Save error:', err);
       setError(err.response?.data?.detail || 'Failed to submit attendance. Check for holiday conflicts.');
     } finally {
       setLoading(false);
