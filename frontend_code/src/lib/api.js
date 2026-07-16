@@ -105,13 +105,23 @@ const api = {
     }
   },
   attendance: {
-    submitBulk: async (classId, date, absentStudentIds, reasons) => {
-      const response = await apiClient.post('/attendance/bulk', {
-        class_id: classId,
-        date,
-        absent_student_ids: absentStudentIds,
-        reasons
-      });
+    // ✅ FIXED: Accepts class_name and allStudents to store both present and absent
+    submitBulk: async (classId, date, absentStudentIds, reasons, allStudents) => {
+      // Build attendance for ALL students (present + absent)
+      const attendancePayload = allStudents.map(student => ({
+        student_id: student.id,
+        status: absentStudentIds.includes(student.id) ? 'absent' : 'present',
+        reason: reasons[student.id] || ''
+      }));
+
+      const payload = {
+        class_name: classId,  // ✅ Changed from class_id to class_name
+        date: date,
+        attendance: attendancePayload  // ✅ Sends both present and absent
+      };
+
+      console.log('Sending attendance payload:', payload); // Debug log
+      const response = await apiClient.post('/attendance/bulk', payload);
       return response.data;
     },
     getStudent: async (studentId, fromDate, toDate) => {
