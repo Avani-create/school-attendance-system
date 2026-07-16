@@ -1,18 +1,18 @@
 {
   "builds": [
     {
-      "src": "dist/**",
+      "src": "frontend_code/dist/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot))",
-      "dest": "/dist/$1"
+      "dest": "/frontend_code/dist/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/index.html"
+      "dest": "/frontend_code/dist/index.html"
     }
   ]
 }
