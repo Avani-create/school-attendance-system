@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 
 export default function TakeAttendance() {
   const [searchParams] = useSearchParams();
   const classParam = searchParams.get('class');
-  const navigate = useNavigate();
   const user = api.auth.getUser();
 
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(classParam || '');
   const [students, setStudents] = useState([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  
-  // ✅ SEPARATE LOADING STATES
-  const [classesLoading, setClassesLoading] = useState(true);  // ← Changed
+
+  const [classesLoading, setClassesLoading] = useState(true);
   const [studentsLoading, setStudentsLoading] = useState(false);
-  const [saving, setSaving] = useState(false);  // ← NEW: separate for saving
-  
+  const [saving, setSaving] = useState(false);
+
   const [absentStudentIds, setAbsentStudentIds] = useState([]);
   const [reasons, setReasons] = useState({});
 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Fetch available classes on mount
+  // Fetch classes
   useEffect(() => {
     const fetchClasses = async () => {
       try {
@@ -51,7 +49,7 @@ export default function TakeAttendance() {
     fetchClasses();
   }, [user, selectedClass]);
 
-  // Fetch students whenever the selected class changes
+  // Fetch students
   useEffect(() => {
     const fetchStudents = async () => {
       if (!selectedClass) return;
@@ -60,10 +58,12 @@ export default function TakeAttendance() {
         setError('');
         setMessage('');
         const data = await api.students.getAll(selectedClass, true);
+        console.log('📚 Students fetched:', data);
         setStudents(data);
         setAbsentStudentIds([]);
         setReasons({});
       } catch (err) {
+        console.error('❌ Fetch students error:', err);
         setError('Failed to load student roster for class ' + selectedClass);
       } finally {
         setStudentsLoading(false);
@@ -93,30 +93,40 @@ export default function TakeAttendance() {
     }));
   };
 
-  // ✅ FIXED: Uses separate 'saving' state
   const handleSave = async () => {
+    console.log('🔥 SAVE BUTTON CLICKED!');
+    
     if (students.length === 0) {
       setError('Cannot submit empty attendance');
       return;
     }
-    
+
+    console.log('📤 Sending:', {
+      class: selectedClass,
+      date,
+      absentStudents: absentStudentIds,
+      reasons,
+      allStudents: students
+    });
+
     setSaving(true);
     setError('');
     setMessage('');
-    
+
     try {
-      await api.attendance.submitBulk(
-        selectedClass, 
-        date, 
-        absentStudentIds, 
-        reasons, 
+      const response = await api.attendance.submitBulk(
+        selectedClass,
+        date,
+        absentStudentIds,
+        reasons,
         students
       );
+      console.log('✅ Response:', response);
       setMessage(`✅ Attendance saved for ${students.length} students. (${students.length - absentStudentIds.length} Present, ${absentStudentIds.length} Absent)`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      console.error('Save error:', err);
-      setError(err.response?.data?.detail || 'Failed to submit attendance. Check for holiday conflicts.');
+      console.error('❌ Save error:', err);
+      setError(err.response?.data?.detail || 'Failed to submit attendance.');
     } finally {
       setSaving(false);
     }
@@ -127,16 +137,19 @@ export default function TakeAttendance() {
 
   return (
     <div className="space-y-6">
+      {/* 🔥 DEBUG BANNER - You should see this if the component renders */}
+      <div style={{ backgroundColor: 'yellow', padding: '10px', marginBottom: '10px', border: '2px solid red' }}>
+        🔥 DEBUG: The component is rendering! (If you see this, the code is running)
+      </div>
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Take Attendance
-          </h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Take Attendance</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Tap or click a student's card to toggle their status between Present and Absent.
+            Tap a student's card to toggle between Present and Absent.
           </p>
         </div>
-
         <div className="flex flex-wrap gap-3">
           <div>
             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Class</label>
@@ -150,7 +163,6 @@ export default function TakeAttendance() {
               ))}
             </select>
           </div>
-
           <div>
             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Date</label>
             <input
@@ -163,8 +175,9 @@ export default function TakeAttendance() {
         </div>
       </div>
 
+      {/* Messages */}
       {message && (
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 animate-slide-in-right">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
           {message}
         </div>
       )}
@@ -174,6 +187,7 @@ export default function TakeAttendance() {
         </div>
       )}
 
+      {/* Status Banner */}
       {students.length > 0 && !studentsLoading && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-slate-900 text-white p-4 shadow-md">
           <div className="text-xs font-semibold">
@@ -187,6 +201,7 @@ export default function TakeAttendance() {
         </div>
       )}
 
+      {/* Student Grid */}
       {studentsLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-900 border-t-transparent" />
@@ -217,14 +232,12 @@ export default function TakeAttendance() {
                         Admission Date: {student.admission_date}
                       </p>
                     </div>
-                    
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold ${
                       isAbsent ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
                     }`}>
                       {isAbsent ? 'Absent' : 'Present'}
                     </span>
                   </div>
-
                   {isAbsent && (
                     <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -240,18 +253,34 @@ export default function TakeAttendance() {
               );
             })}
           </div>
-
-          {/* ✅ FIXED: Uses 'saving' state, not 'loading' */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              className="inline-flex h-11 items-center justify-center rounded-lg bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg hover:bg-emerald-500 transition-all cursor-pointer"
-            >
-              {saving ? 'Saving Attendance...' : 'Save Attendance'}
-            </button>
-          </div>
         </div>
       )}
+
+      {/* ✅ SAVE BUTTON - ALWAYS VISIBLE AT THE BOTTOM (OUTSIDE THE CONDITION) */}
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={() => {
+            console.log('🟢 SAVE BUTTON CLICKED!');
+            handleSave();
+          }}
+          style={{
+            backgroundColor: '#059669',
+            color: 'white',
+            padding: '12px 28px',
+            borderRadius: '10px',
+            border: 'none',
+            fontSize: '15px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#047857'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#059669'}
+          disabled={saving}
+        >
+          {saving ? '⏳ Saving...' : '💾 Save Attendance'}
+        </button>
+      </div>
     </div>
   );
 }
