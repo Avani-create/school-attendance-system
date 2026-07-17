@@ -12,11 +12,12 @@ export default function TakeAttendance() {
   const [selectedClass, setSelectedClass] = useState(classParam || '');
   const [students, setStudents] = useState([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [loading, setLoading] = useState(false);
-  const [studentsLoading, setStudentsLoading] = useState(false);
   
-  // Selection states
-  // We track ABSENT student IDs. Default is empty array (meaning everyone is present).
+  // ✅ SEPARATE LOADING STATES
+  const [classesLoading, setClassesLoading] = useState(true);  // ← Changed
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);  // ← NEW: separate for saving
+  
   const [absentStudentIds, setAbsentStudentIds] = useState([]);
   const [reasons, setReasons] = useState({});
 
@@ -27,7 +28,7 @@ export default function TakeAttendance() {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        setLoading(true);
+        setClassesLoading(true);
         if (user.is_admin) {
           const res = await api.classes.getAll();
           const names = res.classes.map(c => c.class_name);
@@ -44,7 +45,7 @@ export default function TakeAttendance() {
       } catch (err) {
         setError('Failed to load class configuration');
       } finally {
-        setLoading(false);
+        setClassesLoading(false);
       }
     };
     fetchClasses();
@@ -58,9 +59,8 @@ export default function TakeAttendance() {
         setStudentsLoading(true);
         setError('');
         setMessage('');
-        const data = await api.students.getAll(selectedClass, true); // Get active only
+        const data = await api.students.getAll(selectedClass, true);
         setStudents(data);
-        // Reset check states when class shifts
         setAbsentStudentIds([]);
         setReasons({});
       } catch (err) {
@@ -75,15 +75,12 @@ export default function TakeAttendance() {
   const toggleStudentStatus = (studentId) => {
     setAbsentStudentIds((prev) => {
       if (prev.includes(studentId)) {
-        // Mark present (remove from absent list)
         const updated = prev.filter((id) => id !== studentId);
-        // Clear reason
         const newReasons = { ...reasons };
         delete newReasons[studentId];
         setReasons(newReasons);
         return updated;
       } else {
-        // Mark absent (add to absent list)
         return [...prev, studentId];
       }
     });
@@ -96,25 +93,24 @@ export default function TakeAttendance() {
     }));
   };
 
-  // ✅ FIXED: handleSave now passes all students to the API with proper error handling
+  // ✅ FIXED: Uses separate 'saving' state
   const handleSave = async () => {
     if (students.length === 0) {
       setError('Cannot submit empty attendance');
       return;
     }
     
-    setLoading(true);
+    setSaving(true);
     setError('');
     setMessage('');
     
     try {
-      // ✅ This is the correct API call with allStudents
       await api.attendance.submitBulk(
         selectedClass, 
         date, 
         absentStudentIds, 
         reasons, 
-        students  // ← Passing all students for present/absent
+        students
       );
       setMessage(`✅ Attendance saved for ${students.length} students. (${students.length - absentStudentIds.length} Present, ${absentStudentIds.length} Absent)`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -122,8 +118,7 @@ export default function TakeAttendance() {
       console.error('Save error:', err);
       setError(err.response?.data?.detail || 'Failed to submit attendance. Check for holiday conflicts.');
     } finally {
-      // ✅ THIS IS THE KEY — loading always resets
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -132,7 +127,6 @@ export default function TakeAttendance() {
 
   return (
     <div className="space-y-6">
-      {/* Header and selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
@@ -169,7 +163,6 @@ export default function TakeAttendance() {
         </div>
       </div>
 
-      {/* Messages */}
       {message && (
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 animate-slide-in-right">
           {message}
@@ -181,7 +174,6 @@ export default function TakeAttendance() {
         </div>
       )}
 
-      {/* Today's Status Banner */}
       {students.length > 0 && !studentsLoading && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-slate-900 text-white p-4 shadow-md">
           <div className="text-xs font-semibold">
@@ -195,7 +187,6 @@ export default function TakeAttendance() {
         </div>
       )}
 
-      {/* Student Roster Grid */}
       {studentsLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-900 border-t-transparent" />
@@ -234,7 +225,6 @@ export default function TakeAttendance() {
                     </span>
                   </div>
 
-                  {/* Absent Reason Text field */}
                   {isAbsent && (
                     <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -251,13 +241,13 @@ export default function TakeAttendance() {
             })}
           </div>
 
-          {/* ✅ FIXED: Submit action — button is now always clickable */}
+          {/* ✅ FIXED: Uses 'saving' state, not 'loading' */}
           <div className="flex justify-end">
             <button
               onClick={handleSave}
               className="inline-flex h-11 items-center justify-center rounded-lg bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg hover:bg-emerald-500 transition-all cursor-pointer"
             >
-              {loading ? 'Saving Attendance...' : 'Save Attendance'}
+              {saving ? 'Saving Attendance...' : 'Save Attendance'}
             </button>
           </div>
         </div>
