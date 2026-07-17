@@ -1,4 +1,3 @@
-console.log('🔴🔴🔴 TakeAttendance.jsx is LOADED! This file is being used!');
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
@@ -59,12 +58,10 @@ export default function TakeAttendance() {
         setError('');
         setMessage('');
         const data = await api.students.getAll(selectedClass, true);
-        console.log('📚 Students fetched:', data);
         setStudents(data);
         setAbsentStudentIds([]);
         setReasons({});
       } catch (err) {
-        console.error('❌ Fetch students error:', err);
         setError('Failed to load student roster for class ' + selectedClass);
       } finally {
         setStudentsLoading(false);
@@ -95,34 +92,25 @@ export default function TakeAttendance() {
   };
 
   const handleSave = async () => {
-    console.log('🔥 SAVE BUTTON CLICKED!');
+    console.log('🔥 NEW SAVE BUTTON CLICKED!');
     
     if (students.length === 0) {
       setError('Cannot submit empty attendance');
       return;
     }
 
-    console.log('📤 Sending:', {
-      class: selectedClass,
-      date,
-      absentStudents: absentStudentIds,
-      reasons,
-      allStudents: students
-    });
-
     setSaving(true);
     setError('');
     setMessage('');
 
     try {
-      const response = await api.attendance.submitBulk(
+      await api.attendance.submitBulk(
         selectedClass,
         date,
         absentStudentIds,
         reasons,
         students
       );
-      console.log('✅ Response:', response);
       setMessage(`✅ Attendance saved for ${students.length} students. (${students.length - absentStudentIds.length} Present, ${absentStudentIds.length} Absent)`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -138,11 +126,6 @@ export default function TakeAttendance() {
 
   return (
     <div className="space-y-6">
-      {/* 🔥 DEBUG BANNER - You should see this if the component renders */}
-      <div style={{ backgroundColor: 'yellow', padding: '10px', marginBottom: '10px', border: '2px solid red' }}>
-        🔥 DEBUG: The component is rendering! (If you see this, the code is running)
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
@@ -254,34 +237,49 @@ export default function TakeAttendance() {
               );
             })}
           </div>
+
+          {/* ✅ FLOATING SAVE BUTTON - ALWAYS VISIBLE */}
+          <div style={{
+            position: 'fixed',
+            bottom: '30px',
+            right: '30px',
+            zIndex: 9999,
+          }}>
+            <button
+              onClick={() => {
+                console.log('🔴 NEW SAVE BUTTON CLICKED!');
+                handleSave();
+              }}
+              style={{
+                backgroundColor: '#059669',
+                color: 'white',
+                padding: '18px 36px',
+                borderRadius: '50px',
+                border: 'none',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                boxShadow: '0 8px 25px rgba(5, 150, 105, 0.5)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#047857';
+                e.target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#059669';
+                e.target.style.transform = 'scale(1)';
+              }}
+              disabled={saving}
+            >
+              {saving ? '⏳ Saving...' : '💾 SAVE ATTENDANCE'}
+            </button>
+          </div>
         </div>
       )}
-
-      {/* ✅ SAVE BUTTON - ALWAYS VISIBLE AT THE BOTTOM (OUTSIDE THE CONDITION) */}
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={() => {
-            console.log('🟢 SAVE BUTTON CLICKED!');
-            handleSave();
-          }}
-          style={{
-            backgroundColor: '#059669',
-            color: 'white',
-            padding: '12px 28px',
-            borderRadius: '10px',
-            border: 'none',
-            fontSize: '15px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#047857'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#059669'}
-          disabled={saving}
-        >
-          {saving ? '⏳ Saving...' : '💾 Save Attendance'}
-        </button>
-      </div>
     </div>
   );
 }
