@@ -1,3 +1,4 @@
+console.log('🔴🔴🔴 TakeAttendance.jsx is LOADED! This file is being used!');
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
