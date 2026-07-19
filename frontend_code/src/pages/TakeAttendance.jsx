@@ -237,49 +237,49 @@ export default function TakeAttendance() {
               );
             })}
           </div>
-
-          {/* ✅ FLOATING SAVE BUTTON - ALWAYS VISIBLE */}
-          <div style={{
-            position: 'fixed',
-            bottom: '30px',
-            right: '30px',
-            zIndex: 9999,
-          }}>
-            <button
-              onClick={() => {
-                console.log('🔴 NEW SAVE BUTTON CLICKED!');
-                handleSave();
-              }}
-              style={{
-                backgroundColor: '#059669',
-                color: 'white',
-                padding: '18px 36px',
-                borderRadius: '50px',
-                border: 'none',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                boxShadow: '0 8px 25px rgba(5, 150, 105, 0.5)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#047857';
-                e.target.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#059669';
-                e.target.style.transform = 'scale(1)';
-              }}
-              disabled={saving}
-            >
-              {saving ? '⏳ Saving...' : '💾 SAVE ATTENDANCE'}
-            </button>
-          </div>
         </div>
       )}
+
+      {/* ✅ FLOATING SAVE BUTTON - ALWAYS VISIBLE (OUTSIDE THE CONDITION) */}
+      <div style={{
+        position: 'fixed',
+        bottom: '30px',
+        right: '30px',
+        zIndex: 9999,
+      }}>
+        <button
+          onClick={() => {
+            console.log('🔴 FLOATING BUTTON CLICKED!');
+            handleSave();
+          }}
+          style={{
+            backgroundColor: '#059669',
+            color: 'white',
+            padding: '18px 36px',
+            borderRadius: '50px',
+            border: 'none',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            boxShadow: '0 8px 25px rgba(5, 150, 105, 0.5)',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = '#047857';
+            e.target.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = '#059669';
+            e.target.style.transform = 'scale(1)';
+          }}
+          disabled={saving}
+        >
+          {saving ? '⏳ Saving...' : '💾 SAVE ATTENDANCE'}
+        </button>
+      </div>
     </div>
   );
 }
