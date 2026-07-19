@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 // ✅ HARCODED: Directly points to your Render backend
@@ -105,9 +106,9 @@ const api = {
     }
   },
   attendance: {
-    // ✅ FIXED: Matches backend schema exactly
+    // ✅ FIXED: Matches backend schema exactly (only sends what backend expects)
     submitBulk: async (classId, date, absentStudentIds, reasons) => {
-      // ✅ Send only what the backend expects
+      // ✅ Send only what the backend expects (class_id, date, absent_student_ids, reasons)
       const payload = {
         class_id: classId,
         date: date,

@@ -91,6 +91,7 @@ export default function TakeAttendance() {
     }));
   };
 
+  // ✅ FIXED: Removed 'students' parameter from submitBulk call
   const handleSave = async () => {
     console.log('🔥 NEW SAVE BUTTON CLICKED!');
     
@@ -104,12 +105,13 @@ export default function TakeAttendance() {
     setMessage('');
 
     try {
+      // ✅ Only send what the backend expects
       await api.attendance.submitBulk(
         selectedClass,
         date,
         absentStudentIds,
-        reasons,
-        students
+        reasons
+        // ❌ Removed 'students' parameter
       );
       setMessage(`✅ Attendance saved for ${students.length} students. (${students.length - absentStudentIds.length} Present, ${absentStudentIds.length} Absent)`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
