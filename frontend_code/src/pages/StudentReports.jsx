@@ -59,10 +59,13 @@ export default function StudentReports() {
     fetchReport();
   }, [selectedStudent, fromDate, toDate]);
 
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.class_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ FIXED: Added null checks for name and class_name
+  const filteredStudents = students.filter(s => {
+    const name = s?.name || '';
+    const className = s?.class_name || '';
+    const search = searchTerm?.toLowerCase() || '';
+    return name.toLowerCase().includes(search) || className.toLowerCase().includes(search);
+  });
 
   const handleExportPDF = async () => {
     if (!selectedStudent) return;
@@ -166,12 +169,12 @@ export default function StudentReports() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-6 lg:col-span-1">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white font-extrabold text-lg">
-                {selectedStudent.name[0].toUpperCase()}
+                {selectedStudent.name?.[0]?.toUpperCase() || '?'}
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-950">{selectedStudent.name}</h2>
+                <h2 className="text-base font-bold text-slate-950">{selectedStudent.name || 'Unknown Student'}</h2>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">
-                  Class {selectedStudent.class_name} {selectedStudent.section || ''}
+                  Class {selectedStudent.class_name || 'N/A'} {selectedStudent.section || ''}
                 </p>
               </div>
             </div>
@@ -187,7 +190,7 @@ export default function StudentReports() {
               </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-slate-400">Admission Date</span>
-                <span className="font-semibold text-slate-700">{selectedStudent.admission_date}</span>
+                <span className="font-semibold text-slate-700">{selectedStudent.admission_date || 'N/A'}</span>
               </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-slate-400">Status</span>
