@@ -10,6 +10,7 @@ import ManageStudents from './pages/ManageStudents';
 import ManageTeachers from './pages/ManageTeachers';
 import ManageClasses from './pages/ManageClasses';
 import AcademicYear from './pages/AcademicYear';
+import Archive from './pages/Archive';  // ✅ ADD THIS IMPORT
 import api from './lib/api';
 
 // Route guards for Admin-only access
@@ -72,6 +73,15 @@ export default function AppRoutes() {
           element={
             <AdminRoute>
               <AcademicYear />
+            </AdminRoute>
+          }
+        />
+        {/* ✅ NEW: Archive Route */}
+        <Route
+          path="archive"
+          element={
+            <AdminRoute>
+              <Archive />
             </AdminRoute>
           }
         />
