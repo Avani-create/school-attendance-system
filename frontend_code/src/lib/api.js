@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 // ✅ HARCODED: Directly points to your Render backend
@@ -249,6 +248,48 @@ const api = {
     },
     deleteHoliday: async (holidayId) => {
       const response = await apiClient.delete(`/holidays/${holidayId}`);
+      return response.data;
+    }
+  },
+  // ✅ NEW: Archive System API Calls
+  archive: {
+    // Create a new archive record
+    create: async (data) => {
+      const response = await apiClient.post('/archive', data);
+      return response.data;
+    },
+    // Search archive records
+    search: async (params = {}) => {
+      const response = await apiClient.get('/archive', { params });
+      return response.data;
+    },
+    // Get a single record by ID
+    get: async (id) => {
+      const response = await apiClient.get(`/archive/${id}`);
+      return response.data;
+    },
+    // Update a record
+    update: async (id, data) => {
+      const response = await apiClient.put(`/archive/${id}`, data);
+      return response.data;
+    },
+    // Soft delete (archive) a record
+    delete: async (id) => {
+      const response = await apiClient.delete(`/archive/${id}`);
+      return response.data;
+    },
+    // Get list of years with record counts
+    getYears: async () => {
+      const response = await apiClient.get('/archive/years/list');
+      return response.data;
+    },
+    // Upload a scanned image for a record
+    uploadImage: async (recordId, imageFile) => {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      const response = await apiClient.post(`/archive/upload-image/${recordId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return response.data;
     }
   }
