@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from database import get_db, engine, Base, AsyncSessionLocal
 from auth import router as auth_router
-from routes import students, teachers, classes, attendance, reports, academic_years
+from routes import students, teachers, classes, attendance, reports, academic_years, archive
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI with Swagger enabled
 app = FastAPI(
     title="School Attendance Management System API",
-    description="API for managing school attendance, students, teachers, and reports",
+    description="API for managing school attendance, students, teachers, reports, and archive",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -81,6 +81,7 @@ app.include_router(classes.router, tags=["Classes"])
 app.include_router(attendance.router, tags=["Attendance"])
 app.include_router(reports.router, tags=["Reports"])
 app.include_router(academic_years.router, tags=["Academic Years"])
+app.include_router(archive.router, tags=["Archive"])
 
 @app.get("/")
 async def root():
@@ -92,4 +93,4 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "database": "PostgreSQL"}  # ✅ UPDATED
+    return {"status": "healthy", "database": "PostgreSQL"}

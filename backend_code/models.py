@@ -146,3 +146,57 @@ class AuditLog(Base):
 
     # Relationships
     user = relationship("Teacher", back_populates="audit_logs")
+
+
+# ===== ARCHIVE SYSTEM MODELS =====
+
+class ArchiveRecord(Base):
+    __tablename__ = "archive_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    unique_id = Column(String(20), unique=True, nullable=False, index=True)
+    book_name = Column(String(100))
+    page_number = Column(Integer)
+    year = Column(Integer, index=True)
+    student_name = Column(String(100), nullable=False, index=True)
+    class_name = Column("class", String(10))
+    date_of_birth = Column(Date)
+    religion = Column(String(50))
+    caste_category = Column(String(50))
+    parent_name = Column(String(100))
+    admission_date = Column(Date)
+    leaving_date = Column(Date)
+    tc_number = Column(String(50), index=True)
+    reason_for_leaving = Column(Text)
+    remarks = Column(Text)
+    scanned_image_url = Column(Text)
+    is_archived = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.current_timestamp())
+    updated_at = Column(DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp())
+    uploaded_by = Column(String(100))
+
+    # Relationships
+    images = relationship("ArchiveImageUpload", back_populates="record", cascade="all, delete-orphan")
+
+
+class ArchiveImageUpload(Base):
+    __tablename__ = "archive_image_uploads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    record_id = Column(Integer, ForeignKey("archive_records.id", ondelete="CASCADE"), nullable=False)
+    image_url = Column(Text, nullable=False)
+    image_type = Column(String(20), default="front")
+    uploaded_at = Column(DateTime, server_default=func.current_timestamp())
+
+    # Relationships
+    record = relationship("ArchiveRecord", back_populates="images")
+
+
+class ArchiveSearchLog(Base):
+    __tablename__ = "archive_search_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    search_term = Column(String(100))
+    results_count = Column(Integer)
+    searched_at = Column(DateTime, server_default=func.current_timestamp())
+    ip_address = Column(String(50))
