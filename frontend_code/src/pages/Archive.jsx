@@ -13,6 +13,7 @@ export default function Archive() {
 
   // Form state for adding a new record
   const [showAddForm, setShowAddForm] = useState(false);
+  const [recordType, setRecordType] = useState('full'); // 'image', 'basic', 'full'
   const [newRecord, setNewRecord] = useState({
     student_name: '',
     year: '',
@@ -27,7 +28,8 @@ export default function Archive() {
     date_of_birth: '',
     religion: '',
     caste_category: '',
-    remarks: ''
+    remarks: '',
+    scanned_image: null // For image upload
   });
 
   // Fetch years list on load
@@ -77,25 +79,49 @@ export default function Archive() {
     setMessage('');
 
     try {
-      const data = {
-        student_name: newRecord.student_name,
-        year: parseInt(newRecord.year) || null,
-        class_name: newRecord.class_name,
-        tc_number: newRecord.tc_number,
-        parent_name: newRecord.parent_name,
-        admission_date: newRecord.admission_date || null,
-        leaving_date: newRecord.leaving_date || null,
-        reason_for_leaving: newRecord.reason_for_leaving,
-        book_name: newRecord.book_name,
-        page_number: parseInt(newRecord.page_number) || null,
-        date_of_birth: newRecord.date_of_birth || null,
-        religion: newRecord.religion,
-        caste_category: newRecord.caste_category,
-        remarks: newRecord.remarks
-      };
+      // If image upload, handle differently
+      if (recordType === 'image') {
+        // For image upload, we need to create a record first then upload image
+        const data = {
+          student_name: newRecord.student_name || 'Scanned Page',
+          year: parseInt(newRecord.year) || null,
+          book_name: newRecord.book_name,
+          page_number: parseInt(newRecord.page_number) || null,
+          remarks: newRecord.remarks
+        };
+        
+        const response = await api.archive.create(data);
+        const recordId = response.record.id;
+        
+        // If there's an image, upload it
+        if (newRecord.scanned_image) {
+          await api.archive.uploadImage(recordId, newRecord.scanned_image);
+        }
+        
+        setMessage(`✅ Image uploaded! Record ID: ${response.record.unique_id}`);
+      } else {
+        // Regular record creation (basic or full)
+        const data = {
+          student_name: newRecord.student_name,
+          year: parseInt(newRecord.year) || null,
+          class_name: newRecord.class_name,
+          tc_number: newRecord.tc_number,
+          parent_name: newRecord.parent_name,
+          admission_date: newRecord.admission_date || null,
+          leaving_date: newRecord.leaving_date || null,
+          reason_for_leaving: newRecord.reason_for_leaving,
+          book_name: newRecord.book_name,
+          page_number: parseInt(newRecord.page_number) || null,
+          date_of_birth: newRecord.date_of_birth || null,
+          religion: newRecord.religion,
+          caste_category: newRecord.caste_category,
+          remarks: newRecord.remarks
+        };
 
-      const response = await api.archive.create(data);
-      setMessage(`✅ Record added! Unique ID: ${response.record.unique_id}`);
+        const response = await api.archive.create(data);
+        setMessage(`✅ Record added! Unique ID: ${response.record.unique_id}`);
+      }
+      
       setShowAddForm(false);
       
       setNewRecord({
@@ -112,7 +138,8 @@ export default function Archive() {
         date_of_birth: '',
         religion: '',
         caste_category: '',
-        remarks: ''
+        remarks: '',
+        scanned_image: null
       });
       
       searchRecords();
@@ -128,6 +155,13 @@ export default function Archive() {
     setNewRecord({
       ...newRecord,
       [e.target.name]: e.target.value
+    });
+  };
+
+  const handleFileChange = (e) => {
+    setNewRecord({
+      ...newRecord,
+      scanned_image: e.target.files[0]
     });
   };
 
@@ -178,111 +212,261 @@ export default function Archive() {
       {showAddForm && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-bold text-slate-900 mb-4">Add New Archive Record</h2>
+          
           <form onSubmit={handleAddRecord} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student Name *</label>
-              <input
-                type="text"
-                name="student_name"
-                value={newRecord.student_name}
-                onChange={handleInputChange}
-                required
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Year *</label>
-              <input
-                type="number"
-                name="year"
-                value={newRecord.year}
-                onChange={handleInputChange}
-                required
-                placeholder="e.g., 1985"
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Class</label>
-              <input
-                type="text"
-                name="class_name"
-                value={newRecord.class_name}
-                onChange={handleInputChange}
-                placeholder="e.g., 5A"
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">TC Number</label>
-              <input
-                type="text"
-                name="tc_number"
-                value={newRecord.tc_number}
-                onChange={handleInputChange}
-                placeholder="e.g., TC-001"
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Parent Name</label>
-              <input
-                type="text"
-                name="parent_name"
-                value={newRecord.parent_name}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date of Birth</label>
-              <input
-                type="date"
-                name="date_of_birth"
-                value={newRecord.date_of_birth}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Admission Date</label>
-              <input
-                type="date"
-                name="admission_date"
-                value={newRecord.admission_date}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Leaving Date</label>
-              <input
-                type="date"
-                name="leaving_date"
-                value={newRecord.leaving_date}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-
+            {/* Record Type Selector */}
             <div className="md:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reason for Leaving</label>
-              <input
-                type="text"
-                name="reason_for_leaving"
-                value={newRecord.reason_for_leaving}
-                onChange={handleInputChange}
-                placeholder="e.g., Completed, Transferred, etc."
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">How do you want to add this record?</label>
+              <select
+                value={recordType}
+                onChange={(e) => setRecordType(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
-              />
+              >
+                <option value="image">📸 Upload Scanned Image (Before 2000)</option>
+                <option value="basic">⌨️ Basic Details (2001–2020)</option>
+                <option value="full">📝 Full Details (2021–Present)</option>
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {recordType === 'image' && '📸 Just upload a photo of the page — no typing needed!'}
+                {recordType === 'basic' && '⌨️ Enter only the essential details: Name, Year, Class, and TC number.'}
+                {recordType === 'full' && '📝 Enter all details for complete digital records.'}
+              </p>
             </div>
+
+            {/* Image Upload Section */}
+            {recordType === 'image' && (
+              <>
+                <div className="md:col-span-2 border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">📸 Upload Scanned Image</p>
+                  <p className="text-xs text-slate-400 mt-1">Take a photo of the page and upload it here</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="mt-3 block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-2">The image will be saved along with basic details</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Book Name</label>
+                  <input
+                    type="text"
+                    name="book_name"
+                    value={newRecord.book_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Admission Register 1970-1975"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Page Number</label>
+                  <input
+                    type="number"
+                    name="page_number"
+                    value={newRecord.page_number}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 12"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Year *</label>
+                  <input
+                    type="number"
+                    name="year"
+                    value={newRecord.year}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., 1985"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student Name (Optional)</label>
+                  <input
+                    type="text"
+                    name="student_name"
+                    value={newRecord.student_name}
+                    onChange={handleInputChange}
+                    placeholder="If known"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Basic Details Section */}
+            {recordType === 'basic' && (
+              <>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student Name *</label>
+                  <input
+                    type="text"
+                    name="student_name"
+                    value={newRecord.student_name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Year *</label>
+                  <input
+                    type="number"
+                    name="year"
+                    value={newRecord.year}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., 2005"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Class</label>
+                  <input
+                    type="text"
+                    name="class_name"
+                    value={newRecord.class_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 5A"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">TC Number</label>
+                  <input
+                    type="text"
+                    name="tc_number"
+                    value={newRecord.tc_number}
+                    onChange={handleInputChange}
+                    placeholder="e.g., TC-001"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Full Details Section */}
+            {recordType === 'full' && (
+              <>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student Name *</label>
+                  <input
+                    type="text"
+                    name="student_name"
+                    value={newRecord.student_name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Year *</label>
+                  <input
+                    type="number"
+                    name="year"
+                    value={newRecord.year}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., 2025"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Class</label>
+                  <input
+                    type="text"
+                    name="class_name"
+                    value={newRecord.class_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 5A"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">TC Number</label>
+                  <input
+                    type="text"
+                    name="tc_number"
+                    value={newRecord.tc_number}
+                    onChange={handleInputChange}
+                    placeholder="e.g., TC-001"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Parent Name</label>
+                  <input
+                    type="text"
+                    name="parent_name"
+                    value={newRecord.parent_name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date of Birth</label>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    value={newRecord.date_of_birth}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Admission Date</label>
+                  <input
+                    type="date"
+                    name="admission_date"
+                    value={newRecord.admission_date}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Leaving Date</label>
+                  <input
+                    type="date"
+                    name="leaving_date"
+                    value={newRecord.leaving_date}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reason for Leaving</label>
+                  <input
+                    type="text"
+                    name="reason_for_leaving"
+                    value={newRecord.reason_for_leaving}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Completed, Transferred, etc."
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Additional Remarks</label>
+                  <input
+                    type="text"
+                    name="remarks"
+                    value={newRecord.remarks}
+                    onChange={handleInputChange}
+                    placeholder="Any additional notes"
+                    className="mt-1 block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="md:col-span-2 flex gap-4">
               <button
